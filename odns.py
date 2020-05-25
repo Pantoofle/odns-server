@@ -1,45 +1,65 @@
-from ecies.utils import generate_key
-from ecies import encrypt as ECIESencrypt
-from ecies import decrypt as ECIESdecrypt
-# from coincurve import PublicKey
+from coincurve import PrivateKey, PublicKey
+from ecies.utils import generate_key, hex2pub
+from ecies.utils import encapsulate, decapsulate, aes_encrypt, aes_decrypt
+
 
 class ODNSCypher():
     """
-        Holding all cryptography informations (keys, nonces, algorithms) to
-        decypher requests and cypher back replies.
-
-        Using ECIES algorithm
+        Holding all cryptography algorithms to encrypt and decrypt queries and
+        answers.
     """
 
-    def __init__(self, sk=None):
-        """
-            sk  - Private (secret) Key of the proxy
-        """
+    def __init__(self, server_sk=None, server_pk=None):
+        if server_sk is not None:
+            self.server_sk = PrivateKey.from_pem(server_sk)
 
-        self.sk = sk
-        self.pk = None
+        self.server_sk = server_sk
 
-        if not self.sk:
-            print("No secret key given. Generating a new one...")
-            self.generate_key_pair()
+        if server_pk is not None:
+            if isinstance(server_pk, str):
+                self.server_pk = hex2pub(server_pk)
+            elif isinstance(server_pk, bytes):
+                self.server_pk = PublicKey(server_pk)
+            else:
+                raise TypeError("Invalid public key type")
 
-    def generate_key_pair(self):
-        secp_k = generate_key()
-        self.sk = secp_k.secret
-        self.pk = secp_k.public_key.format(True)
-        print("New pk : ", self.pk.hex())
+        self.server_pk = server_pk
 
-    def decrypt(self, name):
+    def encrypt_query(self, query: bytes):
         """
-            name - data to decrypt
-        """
-        return ECIESdecrypt(self.sk, name)
+            Encrypt the query to send to the server
 
-    def encrypt(self, name, original_request):
+            query     - The query
         """
-            name              - data to encrypt
-            original_request  - request made by client. Containing its public key
+        # Generate the ephemeral key
+        ephemeral_key = generate_key()
+
+        # Generate the symetric key
+        aes_key = encapsulate(ephemeral_key, self.server_pk)
+        # Encrypt the query (this adds the nonce)
+        cipher_text = aes_encrypt(aes_key, query)
+        # Return the message and the symetric key
+        return ephemeral_key.public_key.format(False) + cipher_text, aes_key
+
+    def decrypt_query(self, query: bytes):
         """
-        # Extract the sender key from the request
-        sender_pk = original_request[:65]
-        return ECIESencrypt(sender_pk, name)
+            Decrypts a query received by the server
+
+            query - The query to decrypt
+        """
+        # Parse the server key
+
+        # Parsre the msg, extract the pubkey and the {IV || payload} from the query
+        pubkey = query[0:65]  # uncompressed pubkey's length is 65 bytes
+        encrypted = query[65:]
+        ephemeral_public_key = PublicKey(pubkey)
+
+        # Generate the AES key
+        aes_key = decapsulate(ephemeral_public_key, self.server_sk)
+        return aes_decrypt(aes_key, encrypted), aes_key
+
+    def encrypt_answer(self, answer: bytes, aes_key: bytes):
+        return aes_encrypt(aes_key, answer)
+
+    def decrypt_answer(self, answer: bytes, aes_key: bytes):
+        return aes_decrypt(aes_key, answer)
