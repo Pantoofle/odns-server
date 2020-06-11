@@ -123,10 +123,9 @@ if __name__ == '__main__':
                                      args.timeout)
     logger = DNSLogger(args.log, args.log_prefix)
 
-    print("Starting ODNS Poxy ({}:{} -> {}:{}) [{}]".format(
+    print("Starting ODNS Poxy ({}:{} -> {}:{})".format(
         args.address or "*", args.port,
-        args.dns, args.dns_port,
-        "UDP/TCP" if args.tcp else "UDP"))
+        args.dns, args.dns_port))
 
     if resolver.skip:
         print("    Skipping:", ", ".join(resolver.skip))
