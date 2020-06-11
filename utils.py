@@ -8,11 +8,11 @@ def gen_keys(secret_path, public_path):
     secret_key = generate_key()
     public_key = secret_key.public_key
 
-    print(f"Writing the secret key {secret_path}")
+    print("Writing the secret key to {}".format(secret_path))
     with open(secret_path, 'wb+') as f:
         f.write(secret_key.to_pem())
 
-    print(f"Writing the public key {public_path}")
+    print("Writing the public key to {}".format(public_path))
     with open(public_path, 'w+') as f:
         f.write(public_key.format(True).hex())
 

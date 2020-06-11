@@ -98,8 +98,6 @@ if __name__ == '__main__':
     p.add_argument("--upstream", "-u", default="8.8.8.8:53",
                    metavar="<dns server:port>",
                    help="Upstream DNS server:port (default:8.8.8.8:53)")
-    p.add_argument("--tcp", action='store_true', default=False,
-                   help="TCP proxy (default: UDP only)")
     p.add_argument("--skip", "-s", action="append",
                    metavar="<label>",
                    help="Don't intercept matching label (glob)")
@@ -125,7 +123,7 @@ if __name__ == '__main__':
                                      args.timeout)
     logger = DNSLogger(args.log, args.log_prefix)
 
-    print("Starting ODNS Poxy (%s:%d -> %s:%d) [%s]" % (
+    print("Starting ODNS Poxy ({}:{} -> {}:{}) [{}]".format(
         args.address or "*", args.port,
         args.dns, args.dns_port,
         "UDP/TCP" if args.tcp else "UDP"))
